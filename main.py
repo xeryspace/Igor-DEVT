@@ -9,8 +9,8 @@ from fastapi.templating import Jinja2Templates
 
 current_buy_price_devt = 0
 
-api_key = 'y5tE4UjkOvXyRnt5PV'
-api_secret = 'Z08q0pT48eTeImxg9VLeSYjGUjxRrhyzcHDw'
+api_key = 'z7lPTNi7HuXNVWQzfi'
+api_secret = 'N06FiDfVYbcTVMvjp4d2ume1VSlLZIpJ6KCR'
 session = HTTP(testnet=False, api_key=api_key, api_secret=api_secret)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
