@@ -88,7 +88,7 @@ def open_position(symbol, amount):
     try:
         current_price = get_current_price(symbol)
         session.place_order(
-            category="spot", symbol=symbol, side='buy', orderType="Market", qty=20, price=current_price)
+            category="spot", symbol=symbol, side='buy', orderType="Market", qty=amount, price=current_price)
 
         current_buy_price_xeta = get_current_price(symbol)
 
