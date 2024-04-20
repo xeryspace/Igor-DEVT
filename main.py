@@ -86,7 +86,7 @@ def open_position(symbol, amount):
     global current_buy_price_xeta
     try:
         current_price = get_current_price(symbol)
-        limit_price = current_price * 0.9985
+        limit_price = current_price * 0.997
         decimal_places = len(str(current_price).split('.')[1])
         limit_price = round(limit_price, decimal_places)
         session.place_order(
@@ -107,8 +107,8 @@ def open_position(symbol, amount):
                 session.cancel_order(orderId=order['orderId'])
 
         # Place a market order instead
-        session.place_order(category="spot", symbol=symbol, side='buy', orderType="Market", qty=amount)
-        current_buy_price_xeta = get_current_price(symbol)
+        # session.place_order(category="spot", symbol=symbol, side='buy', orderType="Market", qty=amount)
+        # current_buy_price_xeta = get_current_price(symbol)
 
     except Exception as e:
         logger.error(f"Error in open_position: {str(e)}")
