@@ -116,13 +116,13 @@ async def process_signal(symbol, action):
         usdt_balance = get_wallet_balance("USDT")
         if usdt_balance > 3:
             rounded_down = math.floor(usdt_balance)
-            mfer_price_temp = (get_current_price(symbol)*0.9989)
+            mfer_price_temp = (get_current_price(symbol))
             logger.info(f"{action} signal received for {symbol} with price: {mfer_price_temp}")
 
             # Calculate the time to wait until the next 1-minute candle closes
             current_time = time.time()
-            next_candle_close = math.ceil(current_time / 60) * 60
-            time_to_wait = next_candle_close - current_time - 5
+            next_candle_close = math.ceil(current_time / 10) * 10
+            time_to_wait = next_candle_close - current_time - 2
 
             if time_to_wait > 0:
                 logger.info(f"Waiting {time_to_wait:.2f} seconds for the next 1-minute candle close")
