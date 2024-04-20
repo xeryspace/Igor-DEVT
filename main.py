@@ -86,7 +86,9 @@ def open_position(symbol, amount):
     global current_buy_price_xeta
     try:
         current_price = get_current_price(symbol)
-        limit_price = math.floor(current_price * 0.997)
+        limit_price = current_price * 0.9985
+        decimal_places = len(str(current_price).split('.')[1])
+        limit_price = round(limit_price, decimal_places)
         session.place_order(
             category="spot", symbol=symbol, side='buy', orderType="Limit", qty=amount, price=limit_price)
 
