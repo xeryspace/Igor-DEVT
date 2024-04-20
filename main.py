@@ -125,6 +125,8 @@ async def process_sell_signal(symbol):
         if symbol_balance_xeta > 10:
             symbol_balance_xeta = math.floor(symbol_balance_xeta)
             close_position("XETAUSDT", symbol_balance_xeta)
+            global current_buy_price_xeta
+            current_buy_price_xeta = 0  # Reset the buy price to 0 after selling
         else:
             print(f"Insufficient XETA balance to close position for {symbol}")
 
