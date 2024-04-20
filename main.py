@@ -33,7 +33,7 @@ async def handle_webhook(request: Request):
         body = await request.json()
         symbol = body.get("symbol")
 
-        logger.info(f"Received signal for {symbol}")
+        print(f"Received signal for {symbol}")
 
         await process_signal(symbol)
         return {"status": "success", "data": "Position updated"}
@@ -107,7 +107,7 @@ async def process_signal(symbol):
             open_position(symbol, rounded_down)
             current_buy_price_xeta = get_current_price(symbol)
         else:
-            logger.info(f"Insufficient USDT balance to open a Buy position for {symbol}")
+            print(f"Insufficient USDT balance to open a Buy position for {symbol}")
 
     except Exception as e:
         logger.error(f"Error in process_signal: {str(e)}")
@@ -130,7 +130,7 @@ async def check_price():
             print(f'Buyprice: {current_buy_price_xeta} // Current Price: {current_price_xeta} // %-Change: {price_change_percent_xeta}')
 
             if not initial_sell_triggered and price_change_percent_xeta <= initial_stop_loss_threshold_percent:
-                logger.info(f"Price decreased by {price_change_percent_xeta:.2f}% for XETAUSDT. Selling 50% of XETA.")
+                print(f"Price decreased by {price_change_percent_xeta:.2f}% for XETAUSDT. Selling 50% of XETA.")
                 symbol_balance_xeta = get_wallet_balance("XETA")
                 if symbol_balance_xeta > 10:
                     half_balance = math.floor(symbol_balance_xeta / 2)
@@ -138,7 +138,7 @@ async def check_price():
                     initial_sell_triggered = True
 
             elif initial_sell_triggered and price_change_percent_xeta >= 0:
-                logger.info(f"Price increased back to 0% for XETAUSDT. Rebuying XETA.")
+                print(f"Price increased back to 0% for XETAUSDT. Rebuying XETA.")
                 usdt_balance = get_wallet_balance("USDT")
                 if usdt_balance > 3:
                     rounded_down = math.floor(usdt_balance)
@@ -146,7 +146,7 @@ async def check_price():
                     initial_sell_triggered = False
 
             elif initial_sell_triggered and price_change_percent_xeta <= final_stop_loss_threshold_percent:
-                logger.info(f"Price decreased further by {price_change_percent_xeta:.2f}% for XETAUSDT. Selling remaining XETA.")
+                print(f"Price decreased further by {price_change_percent_xeta:.2f}% for XETAUSDT. Selling remaining XETA.")
                 symbol_balance_xeta = get_wallet_balance("XETA")
                 if symbol_balance_xeta > 10:
                     symbol_balance_xeta = math.floor(symbol_balance_xeta)
@@ -156,12 +156,12 @@ async def check_price():
                 if price_change_percent_xeta >= sell_threshold_increments[i] and i > current_threshold_index:
                     current_threshold_index = i
                     stop_loss_threshold_percent = sell_threshold_increments[i] - 0.5
-                    logger.info(
+                    print(
                         f"Price increased by {price_change_percent_xeta:.2f}% for XETAUSDT. Setting sell threshold to {stop_loss_threshold_percent:.2f}%.")
                     break
 
             if price_change_percent_xeta >= 8.0 or (price_change_percent_xeta <= stop_loss_threshold_percent and not initial_sell_triggered):
-                logger.info(f"Price reached {price_change_percent_xeta:.2f}% for XETAUSDT. Selling all XETA.")
+                print(f"Price reached {price_change_percent_xeta:.2f}% for XETAUSDT. Selling all XETA.")
                 symbol_balance_xeta = get_wallet_balance("XETA")
                 if symbol_balance_xeta > 10:
                     symbol_balance_xeta = math.floor(symbol_balance_xeta)
