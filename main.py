@@ -86,8 +86,7 @@ def open_position(symbol, amount):
     global current_buy_price_xeta
     try:
         current_price = get_current_price(symbol)
-        limit_price = current_price * 0.997
-
+        limit_price = math.floor(current_price * 0.997)
         session.place_order(
             category="spot", symbol=symbol, side='buy', orderType="Limit", qty=amount, price=limit_price)
 
@@ -145,6 +144,7 @@ async def process_signal(symbol):
 
 async def check_price():
     global current_buy_price_xeta
+    global current_buy_price_xeta
     initial_stop_loss_threshold_percent = -1
     final_stop_loss_threshold_percent = -2
     sell_threshold_increments = [1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8]
@@ -152,12 +152,17 @@ async def check_price():
     current_threshold_index = -1
     initial_sell_triggered = False
     print("Waiting for Action")
+    last_print_time = time.time()
     while True:
         if current_buy_price_xeta > 0:
             current_price_xeta = get_current_price("XETAUSDT")
             price_change_percent_xeta = (current_price_xeta - current_buy_price_xeta) / current_buy_price_xeta * 100
-            print(
-                f'Buyprice: {current_buy_price_xeta} // Current Price: {current_price_xeta} // %-Change: {price_change_percent_xeta}')
+
+            current_time = time.time()
+            if current_time - last_print_time >= 2:
+                print(
+                    f'Buyprice: {current_buy_price_xeta} // Current Price: {current_price_xeta} // %-Change: {price_change_percent_xeta}')
+                last_print_time = current_time
 
             if not initial_sell_triggered and price_change_percent_xeta <= initial_stop_loss_threshold_percent:
                 print(f"Price decreased by {price_change_percent_xeta:.2f}% for XETAUSDT. Selling 50% of XETA.")
