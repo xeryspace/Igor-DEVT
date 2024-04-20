@@ -7,7 +7,7 @@ from fastapi import FastAPI, HTTPException, Request
 from pybit.unified_trading import HTTP
 from fastapi.templating import Jinja2Templates
 
-current_buy_price_xeta = 0
+current_buy_price_degen = 0
 
 api_key = 'z7lPTNi7HuXNVWQzfi'
 api_secret = 'N06FiDfVYbcTVMvjp4d2ume1VSlLZIpJ6KCR'
@@ -77,35 +77,35 @@ def get_current_price(symbol):
         raise
 
 def open_position(symbol, amount):
-    global current_buy_price_xeta
+    global current_buy_price_degen
     try:
         session.place_order(
             category="spot", symbol=symbol, side='buy', orderType="Market", qty=amount)
-        current_buy_price_xeta = get_current_price(symbol)
+        current_buy_price_degen = get_current_price(symbol)
     except Exception as e:
         logger.error(f"Error in open_position: {str(e)}")
         raise
 
 def close_position(symbol, amount):
-    global current_buy_price_xeta
-    print(current_buy_price_xeta)
+    global current_buy_price_degen
+    print(current_buy_price_degen)
     try:
         session.place_order(
             category="spot", symbol=symbol, side='sell', orderType="Market", qty=amount)
-        current_buy_price_xeta = 0
-        print(f"Current buy price for XETAUSDT: {current_buy_price_xeta}")
+        current_buy_price_degen = 0
+        print(f"Current buy price for DEGENUSDT: {current_buy_price_degen}")
     except Exception as e:
         logger.error(f"Error in close_position: {str(e)}")
         raise
 
 async def process_signal(symbol):
-    global current_buy_price_xeta
+    global current_buy_price_degen
     try:
         usdt_balance = get_wallet_balance("USDT")
         if usdt_balance > 3:
             rounded_down = math.floor(usdt_balance)
             open_position(symbol, rounded_down)
-            current_buy_price_xeta = get_current_price(symbol)
+            current_buy_price_degen = get_current_price(symbol)
         else:
             logger.info(f"Insufficient USDT balance to open a Buy position for {symbol}")
 
@@ -115,7 +115,7 @@ async def process_signal(symbol):
 
 
 async def check_price():
-    global current_buy_price_xeta
+    global current_buy_price_degen
     initial_stop_loss_threshold_percent = -1
     final_stop_loss_threshold_percent = -2
     sell_threshold_increments = [0.5, 1.0, 1.3, 1.6, 1.9, 2.1, 2.4, 2.7, 3.0, 3.3, 3.6, 4.0]
@@ -124,51 +124,50 @@ async def check_price():
     initial_sell_triggered = False
 
     while True:
-        if current_buy_price_xeta > 0:
-            current_price_xeta = get_current_price("XETAUSDT")
-            price_change_percent_xeta = (current_price_xeta - current_buy_price_xeta) / current_buy_price_xeta * 100
-            print(f'Buyprice: {current_buy_price_xeta} // Current Price: {current_price_xeta} // %-Change: {price_change_percent_xeta}')
+        if current_buy_price_degen > 0:
+            current_price_degen = get_current_price("DEGENUSDT")
+            price_change_percent_degen = (current_price_degen - current_buy_price_degen) / current_buy_price_degen * 100
+            print(f'Buyprice: {current_buy_price_degen} // Current Price: {current_price_degen} // %-Change: {price_change_percent_degen}')
 
-            if not initial_sell_triggered and price_change_percent_xeta <= initial_stop_loss_threshold_percent:
-                logger.info(f"Price decreased by {price_change_percent_xeta:.2f}% for XETAUSDT. Selling 50% of XETA.")
-                symbol_balance_xeta = get_wallet_balance("XETA")
-                if symbol_balance_xeta > 10:
-                    half_balance = math.floor(symbol_balance_xeta / 2)
-                    close_position("XETAUSDT", half_balance)
+            if not initial_sell_triggered and price_change_percent_degen <= initial_stop_loss_threshold_percent:
+                logger.info(f"Price decreased by {price_change_percent_degen:.2f}% for DEGENUSDT. Selling 50% of DEGEN.")
+                symbol_balance_degen = get_wallet_balance("DEGEN")
+                if symbol_balance_degen > 10:
+                    half_balance = math.floor(symbol_balance_degen / 2)
+                    close_position("DEGENUSDT", half_balance)
                     initial_sell_triggered = True
 
-            elif initial_sell_triggered and price_change_percent_xeta >= 0:
-                logger.info(f"Price increased back to 0% for XETAUSDT. Rebuying XETA.")
+            elif initial_sell_triggered and price_change_percent_degen >= 0:
+                logger.info(f"Price increased back to 0% for DEGENUSDT. Rebuying DEGEN.")
                 usdt_balance = get_wallet_balance("USDT")
                 if usdt_balance > 3:
                     rounded_down = math.floor(usdt_balance)
-                    open_position("XETAUSDT", rounded_down)
+                    open_position("DEGENUSDT", rounded_down)
                     initial_sell_triggered = False
 
-            elif initial_sell_triggered and price_change_percent_xeta <= final_stop_loss_threshold_percent:
-                logger.info(f"Price decreased further by {price_change_percent_xeta:.2f}% for XETAUSDT. Selling remaining XETA.")
-                symbol_balance_xeta = get_wallet_balance("XETA")
-                if symbol_balance_xeta > 10:
-                    symbol_balance_xeta = math.floor(symbol_balance_xeta)
-                    close_position("XETAUSDT", symbol_balance_xeta)
+            elif initial_sell_triggered and price_change_percent_degen <= final_stop_loss_threshold_percent:
+                logger.info(f"Price decreased further by {price_change_percent_degen:.2f}% for DEGENUSDT. Selling remaining DEGEN.")
+                symbol_balance_degen = get_wallet_balance("DEGEN")
+                if symbol_balance_degen > 10:
+                    symbol_balance_degen = math.floor(symbol_balance_degen)
+                    close_position("DEGENUSDT", symbol_balance_degen)
 
             for i in range(len(sell_threshold_increments)):
-                if price_change_percent_xeta >= sell_threshold_increments[i] and i > current_threshold_index:
+                if price_change_percent_degen >= sell_threshold_increments[i] and i > current_threshold_index:
                     current_threshold_index = i
                     stop_loss_threshold_percent = sell_threshold_increments[i] - 0.5
                     logger.info(
-                        f"Price increased by {price_change_percent_xeta:.2f}% for XETAUSDT. Setting sell threshold to {stop_loss_threshold_percent:.2f}%.")
+                        f"Price increased by {price_change_percent_degen:.2f}% for DEGENUSDT. Setting sell threshold to {stop_loss_threshold_percent:.2f}%.")
                     break
 
-            if price_change_percent_xeta >= 4.0 or (price_change_percent_xeta <= stop_loss_threshold_percent and not initial_sell_triggered):
-                logger.info(f"Price reached {price_change_percent_xeta:.2f}% for XETAUSDT. Selling all XETA.")
-                symbol_balance_xeta = get_wallet_balance("XETA")
-                if symbol_balance_xeta > 10:
-                    symbol_balance_xeta = math.floor(symbol_balance_xeta)
-                    close_position("XETAUSDT", symbol_balance_xeta)
+            if price_change_percent_degen >= 4.0 or (price_change_percent_degen <= stop_loss_threshold_percent and not initial_sell_triggered):
+                logger.info(f"Price reached {price_change_percent_degen:.2f}% for DEGENUSDT. Selling all DEGEN.")
+                symbol_balance_degen = get_wallet_balance("DEGEN")
+                if symbol_balance_degen > 10:
+                    symbol_balance_degen = math.floor(symbol_balance_degen)
+                    close_position("DEGENUSDT", symbol_balance_degen)
 
         await asyncio.sleep(0.08)
-
 @app.on_event("startup")
 async def startup_event():
     asyncio.create_task(check_price())
