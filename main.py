@@ -133,39 +133,20 @@ async def process_signal(symbol, action):
 
 async def check_price():
     global current_buy_price_devt
-    initial_profit_threshold_percent = 1.5
+    profit_threshold_percent = 1.5
     stop_loss_threshold_percent = -0.65
-    sell_quantity_percent = 0.2
-    sell_threshold_percent = 1.0
-    sell_threshold_increment = 0.2
 
     while True:
         if current_buy_price_devt > 0:
             current_price_devt = get_current_price("DEVTUSDT")
             price_change_percent_devt = (current_price_devt - current_buy_price_devt) / current_buy_price_devt * 100
-
-            if price_change_percent_devt >= initial_profit_threshold_percent:
-                logger.info(f"Price increased by {price_change_percent_devt:.2f}% for DEVTUSDT. Monitoring for sell threshold.")
-                while True:
-                    current_price_devt = get_current_price("DEVTUSDT")
-                    price_change_percent_devt = (current_price_devt - current_buy_price_devt) / current_buy_price_devt * 100
-
-                    if price_change_percent_devt >= sell_threshold_percent:
-                        symbol_balance_devt = get_wallet_balance("DEVT")
-                        if symbol_balance_devt > 10:
-                            sell_quantity = math.floor(symbol_balance_devt * sell_quantity_percent)
-                            logger.info(f"Selling {sell_quantity} DEVT at {sell_threshold_percent:.2f}% profit.")
-                            close_position("DEVTUSDT", sell_quantity)
-                            sell_threshold_percent += sell_threshold_increment
-                    elif price_change_percent_devt <= stop_loss_threshold_percent:
-                        logger.info(f"Price dropped below {stop_loss_threshold_percent:.2f}% for DEVTUSDT. Selling all DEVT.")
-                        symbol_balance_devt = get_wallet_balance("DEVT")
-                        if symbol_balance_devt > 10:
-                            symbol_balance_devt = math.floor(symbol_balance_devt)
-                            close_position("DEVTUSDT", symbol_balance_devt)
-                        break
-                    await asyncio.sleep(0.1)
-
+            print(price_change_percent_devt)
+            if price_change_percent_devt >= profit_threshold_percent:
+                logger.info(f"Price increased by {price_change_percent_devt:.2f}% for DEVTUSDT. Selling all DEVT.")
+                symbol_balance_devt = get_wallet_balance("DEVT")
+                if symbol_balance_devt > 10:
+                    symbol_balance_devt = math.floor(symbol_balance_devt)
+                    close_position("DEVTUSDT", symbol_balance_devt)
             elif price_change_percent_devt <= stop_loss_threshold_percent:
                 logger.info(f"Price dropped below {stop_loss_threshold_percent:.2f}% for DEVTUSDT. Selling all DEVT.")
                 symbol_balance_devt = get_wallet_balance("DEVT")
@@ -173,7 +154,7 @@ async def check_price():
                     symbol_balance_devt = math.floor(symbol_balance_devt)
                     close_position("DEVTUSDT", symbol_balance_devt)
 
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(1)
 
 @app.on_event("startup")
 async def startup_event():
