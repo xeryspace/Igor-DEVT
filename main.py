@@ -117,7 +117,7 @@ async def process_signal(symbol):
 async def check_price():
     global current_buy_price_degen
     initial_stop_loss_threshold_percent = -0.65
-    sell_threshold_increments = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0]
+    sell_threshold_increments = [0.5, 1.0, 1.3, 1.6, 1.9, 2.1, 2.4, 2.7, 3.0, 3.3, 3.6, 4.0]
     stop_loss_threshold_percent = initial_stop_loss_threshold_percent
     current_threshold_index = -1
 
@@ -125,7 +125,7 @@ async def check_price():
         if current_buy_price_degen > 0:
             current_price_degen = get_current_price("DEGENUSDT")
             price_change_percent_degen = (current_price_degen - current_buy_price_degen) / current_buy_price_degen * 100
-
+            print(f'Bought at: {current_price_degen} // Current Price: {current_buy_price_degen} // %-Change:  {price_change_percent_degen}')
             for i in range(len(sell_threshold_increments)):
                 if price_change_percent_degen >= sell_threshold_increments[i] and i > current_threshold_index:
                     current_threshold_index = i
@@ -141,7 +141,7 @@ async def check_price():
                     symbol_balance_degen = math.floor(symbol_balance_degen)
                     close_position("DEGENUSDT", symbol_balance_degen)
 
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.08)
 
 @app.on_event("startup")
 async def startup_event():
