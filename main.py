@@ -122,7 +122,7 @@ async def process_signal(symbol, action):
             # Calculate the time to wait until the next 30-second candle closes
             current_time = time.time()
             next_candle_close = math.ceil(current_time / 30) * 30
-            time_to_wait = next_candle_close - current_time - 5
+            time_to_wait = next_candle_close - current_time - 2
 
             if time_to_wait > 0:
                 logger.info(f"Waiting {time_to_wait:.2f} seconds for the next 30-second candle close")
