@@ -109,6 +109,17 @@ def close_position(symbol, amount):
         raise
 
 
+def close_partial_position(symbol, amount):
+    global current_buy_price_xeta
+    try:
+        session.place_order(
+            category="spot", symbol=symbol, side='sell', orderType="Market", qty=amount)
+        print(f"Sold 50%, Current Buy Price still: {current_buy_price_xeta}")
+    except Exception as e:
+        logger.error(f"Error in close_position: {str(e)}")
+        raise
+
+
 async def process_signal(symbol):
     global current_buy_price_xeta
     try:
@@ -128,9 +139,9 @@ async def process_signal(symbol):
 async def check_price():
     global current_buy_price_xeta
     global current_buy_price_xeta
-    initial_stop_loss_threshold_percent = -1
-    final_stop_loss_threshold_percent = -2
-    sell_threshold_increments = [1.5, 3, 4, 5, 6, 7, 8, 9, 10]
+    initial_stop_loss_threshold_percent = -0.5
+    final_stop_loss_threshold_percent = - 1.5
+    sell_threshold_increments = [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8]
     stop_loss_threshold_percent = initial_stop_loss_threshold_percent
     current_threshold_index = -1
     initial_sell_triggered = False
@@ -151,7 +162,7 @@ async def check_price():
                 symbol_balance_xeta = get_wallet_balance("XETA")
                 if symbol_balance_xeta > 10:
                     half_balance = math.floor(symbol_balance_xeta / 2)
-                    close_position("XETAUSDT", half_balance)
+                    close_partial_position("XETAUSDT", half_balance)
                     initial_sell_triggered = True
 
             elif initial_sell_triggered and price_change_percent_xeta >= 0:
