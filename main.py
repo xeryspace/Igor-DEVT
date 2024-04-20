@@ -147,7 +147,7 @@ async def check_price():
     global current_buy_price_xeta
     initial_stop_loss_threshold_percent = -1
     final_stop_loss_threshold_percent = -2
-    sell_threshold_increments = [1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8]
+    sell_threshold_increments = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     stop_loss_threshold_percent = initial_stop_loss_threshold_percent
     current_threshold_index = -1
     initial_sell_triggered = False
@@ -196,7 +196,7 @@ async def check_price():
                         f"Price increased by {price_change_percent_xeta:.2f}% for XETAUSDT. Setting sell threshold to {stop_loss_threshold_percent:.2f}%.")
                     break
 
-            if price_change_percent_xeta >= 8.0 or (
+            if price_change_percent_xeta >= 10 or (
                     price_change_percent_xeta <= stop_loss_threshold_percent and not initial_sell_triggered):
                 print(f"Price reached {price_change_percent_xeta:.2f}% for XETAUSDT. Selling all XETA.")
                 symbol_balance_xeta = get_wallet_balance("XETA")
