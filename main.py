@@ -143,7 +143,7 @@ async def process_signal(symbol, action):
                     logger.info(f"Current price ({current_price}) is lower than the temp price ({mfer_price_temp}). Aborting the buy.")
                     current_buy_price_mfer = 0
             elif action == "stillbuy":
-                if current_price < mfer_price_temp:
+                if current_price <= mfer_price_temp:
                     logger.info(f"Current price ({current_price}) is lower than the temp price ({mfer_price_temp}). Proceeding with the buy.")
                     open_position(symbol, rounded_down)
                     current_buy_price_mfer = get_current_price(symbol)
