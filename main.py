@@ -7,7 +7,7 @@ from fastapi import FastAPI, HTTPException, Request
 from pybit.unified_trading import HTTP
 from fastapi.templating import Jinja2Templates
 
-current_buy_price_devt = 0
+current_buy_price_degen = 0
 
 api_key = 'z7lPTNi7HuXNVWQzfi'
 api_secret = 'N06FiDfVYbcTVMvjp4d2ume1VSlLZIpJ6KCR'
@@ -31,7 +31,7 @@ async def handle_webhook(request: Request):
             raise HTTPException(status_code=403, detail="Invalid passphrase")
 
         body = await request.json()
-        symbol = body.get("symbol")  # Get the symbol 'DEVTUSDT'
+        symbol = body.get("symbol")  # Get the symbol 'DEGENUSDT'
         action = body.get("action")
 
         if action not in ['buy', 'sell']:
@@ -81,48 +81,48 @@ def get_current_price(symbol):
         raise
 
 def open_position(symbol, amount):
-    global current_buy_price_devt
+    global current_buy_price_degen
     try:
         session.place_order(
             category="spot", symbol=symbol, side='buy', orderType="Market", qty=amount)
-        current_buy_price_devt = get_current_price(symbol)
+        current_buy_price_degen = get_current_price(symbol)
     except Exception as e:
         logger.error(f"Error in open_position: {str(e)}")
         raise
 
 def close_position(symbol, amount):
-    global current_buy_price_devt
-    print(current_buy_price_devt)
+    global current_buy_price_degen
+    print(current_buy_price_degen)
     try:
         session.place_order(
             category="spot", symbol=symbol, side='sell', orderType="Market", qty=amount)
-        current_buy_price_devt = 0
-        print(f"Current buy price for DEVTUSDT: {current_buy_price_devt}")
+        current_buy_price_degen = 0
+        print(f"Current buy price for DEGENUSDT: {current_buy_price_degen}")
     except Exception as e:
         logger.error(f"Error in close_position: {str(e)}")
         raise
 
 async def process_signal(symbol, action):
-    global current_buy_price_devt
+    global current_buy_price_degen
     try:
         if action == "buy":
             usdt_balance = get_wallet_balance("USDT")
             if usdt_balance > 3:
                 rounded_down = math.floor(usdt_balance)
                 open_position(symbol, rounded_down)
-                current_buy_price_devt = get_current_price(symbol)
+                current_buy_price_degen = get_current_price(symbol)
             else:
                 logger.info(f"Insufficient USDT balance to open a Buy position for {symbol}")
 
         elif action == "sell":
-            symbol_balance = get_wallet_balance("DEVT")
+            symbol_balance = get_wallet_balance("DEGEN")
             if symbol_balance > 10:
                 symbol_balance = math.floor(symbol_balance)
                 logger.info(f"Closing {symbol} position with quantity: {symbol_balance}")
                 close_position(symbol, symbol_balance)
-                current_buy_price_devt = 0
+                current_buy_price_degen = 0
             else:
-                logger.info(f"DEVT balance is not above 10. No position to close.")
+                logger.info(f"DEGEN balance is not above 10. No position to close.")
 
         else:
             logger.info(f"Invalid action: {action}")
@@ -131,28 +131,37 @@ async def process_signal(symbol, action):
         logger.error(f"Error in process_signal: {str(e)}")
         raise
 
+
 async def check_price():
-    global current_buy_price_devt
-    profit_threshold_percent = 1.5
-    stop_loss_threshold_percent = -0.65
+    global current_buy_price_degen
+    initial_stop_loss_threshold_percent = -0.65
+    sell_threshold_increments = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0]
+    stop_loss_threshold_percent = initial_stop_loss_threshold_percent
 
     while True:
-        if current_buy_price_devt > 0:
-            current_price_devt = get_current_price("DEVTUSDT")
-            price_change_percent_devt = (current_price_devt - current_buy_price_devt) / current_buy_price_devt * 100
-            print(price_change_percent_devt)
-            if price_change_percent_devt >= profit_threshold_percent:
-                logger.info(f"Price increased by {price_change_percent_devt:.2f}% for DEVTUSDT. Selling all DEVT.")
-                symbol_balance_devt = get_wallet_balance("DEVT")
-                if symbol_balance_devt > 10:
-                    symbol_balance_devt = math.floor(symbol_balance_devt)
-                    close_position("DEVTUSDT", symbol_balance_devt)
-            elif price_change_percent_devt <= stop_loss_threshold_percent:
-                logger.info(f"Price dropped below {stop_loss_threshold_percent:.2f}% for DEVTUSDT. Selling all DEVT.")
-                symbol_balance_devt = get_wallet_balance("DEVT")
-                if symbol_balance_devt > 10:
-                    symbol_balance_devt = math.floor(symbol_balance_devt)
-                    close_position("DEVTUSDT", symbol_balance_devt)
+        if current_buy_price_degen > 0:
+            current_price_degen = get_current_price("DEGENUSDT")
+            price_change_percent_degen = (current_price_degen - current_buy_price_degen) / current_buy_price_degen * 100
+
+            for i in range(len(sell_threshold_increments)):
+                if price_change_percent_degen >= sell_threshold_increments[i]:
+                    stop_loss_threshold_percent = sell_threshold_increments[i] - 0.5
+                    logger.info(
+                        f"Price increased by {price_change_percent_degen:.2f}% for DEGENUSDT. Setting sell threshold to {stop_loss_threshold_percent:.2f}%.")
+
+            if price_change_percent_degen >= 4.0:
+                logger.info(f"Price increased by {price_change_percent_degen:.2f}% for DEGENUSDT. Selling all DEGEN.")
+                symbol_balance_degen = get_wallet_balance("DEGEN")
+                if symbol_balance_degen > 10:
+                    symbol_balance_degen = math.floor(symbol_balance_degen)
+                    close_position("DEGENUSDT", symbol_balance_degen)
+
+            if price_change_percent_degen <= stop_loss_threshold_percent:
+                logger.info(f"Price retraced to {price_change_percent_degen:.2f}% for DEGENUSDT. Selling all DEGEN.")
+                symbol_balance_degen = get_wallet_balance("DEGEN")
+                if symbol_balance_degen > 10:
+                    symbol_balance_degen = math.floor(symbol_balance_degen)
+                    close_position("DEGENUSDT", symbol_balance_degen)
 
         await asyncio.sleep(1)
 
