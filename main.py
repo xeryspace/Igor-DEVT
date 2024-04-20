@@ -87,7 +87,7 @@ def open_position(symbol, amount):
     try:
         current_price = get_current_price(symbol)
         session.place_order(
-            category="spot", symbol=symbol, side='buy', orderType="Market", qty=amount, price=current_price)
+            category="spot", symbol=symbol, side='buy', orderType="Market", qty=20, price=current_price)
 
         current_buy_price_xeta = get_current_price(symbol)
 
@@ -126,10 +126,33 @@ async def process_signal(symbol):
         usdt_balance = get_wallet_balance("USDT")
         if usdt_balance > 3:
             rounded_down = math.floor(usdt_balance)
-            open_position(symbol, rounded_down)
-            current_buy_price_xeta = get_current_price(symbol)
+            xeta_price_temp = get_current_price(symbol)
+            logger.info(f"Signal received for {symbol} with price: {xeta_price_temp}")
+
+            # Calculate the time to wait until the next 3-minute candle closes
+            current_time = time.time()
+            next_candle_close = math.ceil(current_time / 180) * 180
+            time_to_wait = next_candle_close - current_time - 5
+
+            if time_to_wait > 0:
+                logger.info(f"Waiting {time_to_wait:.2f} seconds for the next 3-minute candle close")
+                for i in range(int(time_to_wait), 0, -1):
+                    logger.info(f"Countdown: {i} seconds remaining")
+                    await asyncio.sleep(1)
+            else:
+                logger.info("Less than 5 seconds remaining for the next 3-minute candle close. Proceeding with the check.")
+
+            # Check if the current price is equal to or higher than the temp price
+            current_price = get_current_price(symbol)
+            if current_price >= xeta_price_temp:
+                logger.info(f"Current price ({current_price}) is equal to or higher than the temp price ({xeta_price_temp}). Proceeding with the buy.")
+                open_position(symbol, rounded_down)
+                current_buy_price_xeta = get_current_price(symbol)
+            else:
+                logger.info(f"Current price ({current_price}) is lower than the temp price ({xeta_price_temp}). Aborting the buy.")
+                current_buy_price_xeta = 0
         else:
-            print(f"Insufficient USDT balance to open a Buy position for {symbol}")
+            logger.info(f"Insufficient USDT balance to open a Buy position for {symbol}")
 
     except Exception as e:
         logger.error(f"Error in process_signal: {str(e)}")
@@ -137,7 +160,6 @@ async def process_signal(symbol):
 
 
 async def check_price():
-    global current_buy_price_xeta
     global current_buy_price_xeta
     initial_stop_loss_threshold_percent = -0.5
     final_stop_loss_threshold_percent = - 1.5
@@ -207,5 +229,4 @@ async def startup_event():
 
 if __name__ == "__main__":
     import uvicorn
-
     uvicorn.run(app, host="0.0.0.0", port=8000)
