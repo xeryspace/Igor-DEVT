@@ -127,7 +127,7 @@ async def process_signal(symbol, action):
         usdt_balance = get_wallet_balance("USDT")
         if usdt_balance > 3:
             rounded_down = math.floor(usdt_balance)
-            xeta_price_temp = get_current_price(symbol)
+            xeta_price_temp = (get_current_price(symbol)*0.9989)
             logger.info(f"{action} signal received for {symbol} with price: {xeta_price_temp}")
 
             # Calculate the time to wait until the next 3-minute candle closes
