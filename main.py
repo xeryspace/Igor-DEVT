@@ -31,15 +31,11 @@ async def handle_webhook(request: Request):
             raise HTTPException(status_code=403, detail="Invalid passphrase")
 
         body = await request.json()
-        symbol = body.get("symbol")  # Get the symbol 'DEGENUSDT'
-        action = body.get("action")
+        symbol = body.get("symbol")
 
-        if action not in ['buy', 'sell']:
-            return {"status": "ignored", "reason": f"Invalid action: {action}"}
+        logger.info(f"Received signal for {symbol}")
 
-        logger.info(f"Received {action} action for {symbol}")
-
-        await process_signal(symbol, action)
+        await process_signal(symbol)
         return {"status": "success", "data": "Position updated"}
 
     except json.JSONDecodeError as e:
@@ -102,30 +98,16 @@ def close_position(symbol, amount):
         logger.error(f"Error in close_position: {str(e)}")
         raise
 
-async def process_signal(symbol, action):
+async def process_signal(symbol):
     global current_buy_price_degen
     try:
-        if action == "buy":
-            usdt_balance = get_wallet_balance("USDT")
-            if usdt_balance > 3:
-                rounded_down = math.floor(usdt_balance)
-                open_position(symbol, rounded_down)
-                current_buy_price_degen = get_current_price(symbol)
-            else:
-                logger.info(f"Insufficient USDT balance to open a Buy position for {symbol}")
-
-        elif action == "sell":
-            symbol_balance = get_wallet_balance("DEGEN")
-            if symbol_balance > 10:
-                symbol_balance = math.floor(symbol_balance)
-                logger.info(f"Closing {symbol} position with quantity: {symbol_balance}")
-                close_position(symbol, symbol_balance)
-                current_buy_price_degen = 0
-            else:
-                logger.info(f"DEGEN balance is not above 10. No position to close.")
-
+        usdt_balance = get_wallet_balance("USDT")
+        if usdt_balance > 3:
+            rounded_down = math.floor(usdt_balance)
+            open_position(symbol, rounded_down)
+            current_buy_price_degen = get_current_price(symbol)
         else:
-            logger.info(f"Invalid action: {action}")
+            logger.info(f"Insufficient USDT balance to open a Buy position for {symbol}")
 
     except Exception as e:
         logger.error(f"Error in process_signal: {str(e)}")
@@ -137,6 +119,7 @@ async def check_price():
     initial_stop_loss_threshold_percent = -0.65
     sell_threshold_increments = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0]
     stop_loss_threshold_percent = initial_stop_loss_threshold_percent
+    current_threshold_index = -1
 
     while True:
         if current_buy_price_degen > 0:
@@ -144,20 +127,15 @@ async def check_price():
             price_change_percent_degen = (current_price_degen - current_buy_price_degen) / current_buy_price_degen * 100
 
             for i in range(len(sell_threshold_increments)):
-                if price_change_percent_degen >= sell_threshold_increments[i]:
+                if price_change_percent_degen >= sell_threshold_increments[i] and i > current_threshold_index:
+                    current_threshold_index = i
                     stop_loss_threshold_percent = sell_threshold_increments[i] - 0.5
                     logger.info(
                         f"Price increased by {price_change_percent_degen:.2f}% for DEGENUSDT. Setting sell threshold to {stop_loss_threshold_percent:.2f}%.")
+                    break
 
-            if price_change_percent_degen >= 4.0:
-                logger.info(f"Price increased by {price_change_percent_degen:.2f}% for DEGENUSDT. Selling all DEGEN.")
-                symbol_balance_degen = get_wallet_balance("DEGEN")
-                if symbol_balance_degen > 10:
-                    symbol_balance_degen = math.floor(symbol_balance_degen)
-                    close_position("DEGENUSDT", symbol_balance_degen)
-
-            if price_change_percent_degen <= stop_loss_threshold_percent:
-                logger.info(f"Price retraced to {price_change_percent_degen:.2f}% for DEGENUSDT. Selling all DEGEN.")
+            if price_change_percent_degen >= 4.0 or price_change_percent_degen <= stop_loss_threshold_percent:
+                logger.info(f"Price reached {price_change_percent_degen:.2f}% for DEGENUSDT. Selling all DEGEN.")
                 symbol_balance_degen = get_wallet_balance("DEGEN")
                 if symbol_balance_degen > 10:
                     symbol_balance_degen = math.floor(symbol_balance_degen)
