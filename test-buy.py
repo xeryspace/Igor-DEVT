@@ -2,7 +2,7 @@ import requests
 
 url = "http://127.0.0.1:8000/webhook"
 payload = {
-  "action": "stillbuy",
+  "action": "buy",
   "symbol": "XETAUSDT"
 }
 params = {

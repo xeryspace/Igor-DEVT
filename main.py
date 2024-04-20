@@ -32,7 +32,7 @@ async def handle_webhook(request: Request):
 
         body = await request.json()
         symbol = body.get("symbol")
-        side = body.get("side")
+        side = body.get("action")
 
         print(f"Received {side} signal for {symbol}")
 
