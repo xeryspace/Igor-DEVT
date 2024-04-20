@@ -89,8 +89,12 @@ def open_position(symbol, amount):
         limit_price = current_price * 0.997
         decimal_places = len(str(current_price).split('.')[1])
         limit_price = round(limit_price, decimal_places)
+
+        # Calculate the quantity based on the USDT amount and limit price
+        qty = amount / limit_price
+
         session.place_order(
-            category="spot", symbol=symbol, side='buy', orderType="Limit", qty=amount, price=limit_price)
+            category="spot", symbol=symbol, side='buy', orderType="Limit", qty=qty, price=limit_price)
 
         # Wait for a certain period of time before checking the wallet balance
         time.sleep(15)
@@ -105,10 +109,6 @@ def open_position(symbol, amount):
         if open_orders['result']:
             for order in open_orders['result']['list']:
                 session.cancel_order(orderId=order['orderId'])
-
-        # Place a market order instead
-        # session.place_order(category="spot", symbol=symbol, side='buy', orderType="Market", qty=amount)
-        # current_buy_price_xeta = get_current_price(symbol)
 
     except Exception as e:
         logger.error(f"Error in open_position: {str(e)}")
@@ -146,14 +146,12 @@ async def process_signal(symbol):
 
 async def check_price():
     global current_buy_price_xeta
-    global current_buy_price_xeta
     initial_stop_loss_threshold_percent = -1
     final_stop_loss_threshold_percent = -2
     sell_threshold_increments = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     stop_loss_threshold_percent = initial_stop_loss_threshold_percent
     current_threshold_index = -1
     initial_sell_triggered = False
-    print("Waiting for Action")
     last_print_time = time.time()
     while True:
         if current_buy_price_xeta > 0:
