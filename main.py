@@ -116,16 +116,42 @@ async def process_signal(symbol):
 
 async def check_price():
     global current_buy_price_degen
-    initial_stop_loss_threshold_percent = -0.65
+    initial_stop_loss_threshold_percent = -1
+    final_stop_loss_threshold_percent = -2
     sell_threshold_increments = [0.5, 1.0, 1.3, 1.6, 1.9, 2.1, 2.4, 2.7, 3.0, 3.3, 3.6, 4.0]
     stop_loss_threshold_percent = initial_stop_loss_threshold_percent
     current_threshold_index = -1
+    initial_sell_triggered = False
 
     while True:
         if current_buy_price_degen > 0:
             current_price_degen = get_current_price("DEGENUSDT")
             price_change_percent_degen = (current_price_degen - current_buy_price_degen) / current_buy_price_degen * 100
-            print(f'Buyprice: {current_price_degen} // Current Price: {current_buy_price_degen} // %-Change: {price_change_percent_degen}')
+            print(f'Buyprice: {current_buy_price_degen} // Current Price: {current_price_degen} // %-Change: {price_change_percent_degen}')
+
+            if not initial_sell_triggered and price_change_percent_degen <= initial_stop_loss_threshold_percent:
+                logger.info(f"Price decreased by {price_change_percent_degen:.2f}% for DEGENUSDT. Selling 50% of DEGEN.")
+                symbol_balance_degen = get_wallet_balance("DEGEN")
+                if symbol_balance_degen > 10:
+                    half_balance = math.floor(symbol_balance_degen / 2)
+                    close_position("DEGENUSDT", half_balance)
+                    initial_sell_triggered = True
+
+            elif initial_sell_triggered and price_change_percent_degen >= 0:
+                logger.info(f"Price increased back to 0% for DEGENUSDT. Rebuying DEGEN.")
+                usdt_balance = get_wallet_balance("USDT")
+                if usdt_balance > 3:
+                    rounded_down = math.floor(usdt_balance)
+                    open_position("DEGENUSDT", rounded_down)
+                    initial_sell_triggered = False
+
+            elif initial_sell_triggered and price_change_percent_degen <= final_stop_loss_threshold_percent:
+                logger.info(f"Price decreased further by {price_change_percent_degen:.2f}% for DEGENUSDT. Selling remaining DEGEN.")
+                symbol_balance_degen = get_wallet_balance("DEGEN")
+                if symbol_balance_degen > 10:
+                    symbol_balance_degen = math.floor(symbol_balance_degen)
+                    close_position("DEGENUSDT", symbol_balance_degen)
+
             for i in range(len(sell_threshold_increments)):
                 if price_change_percent_degen >= sell_threshold_increments[i] and i > current_threshold_index:
                     current_threshold_index = i
@@ -134,7 +160,7 @@ async def check_price():
                         f"Price increased by {price_change_percent_degen:.2f}% for DEGENUSDT. Setting sell threshold to {stop_loss_threshold_percent:.2f}%.")
                     break
 
-            if price_change_percent_degen >= 4.0 or price_change_percent_degen <= stop_loss_threshold_percent:
+            if price_change_percent_degen >= 4.0 or (price_change_percent_degen <= stop_loss_threshold_percent and not initial_sell_triggered):
                 logger.info(f"Price reached {price_change_percent_degen:.2f}% for DEGENUSDT. Selling all DEGEN.")
                 symbol_balance_degen = get_wallet_balance("DEGEN")
                 if symbol_balance_degen > 10:
@@ -142,7 +168,6 @@ async def check_price():
                     close_position("DEGENUSDT", symbol_balance_degen)
 
         await asyncio.sleep(0.08)
-
 @app.on_event("startup")
 async def startup_event():
     asyncio.create_task(check_price())
