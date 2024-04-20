@@ -125,7 +125,7 @@ async def check_price():
         if current_buy_price_degen > 0:
             current_price_degen = get_current_price("DEGENUSDT")
             price_change_percent_degen = (current_price_degen - current_buy_price_degen) / current_buy_price_degen * 100
-            print(f'Bought at: {current_price_degen} // Current Price: {current_buy_price_degen} // %-Change:  {price_change_percent_degen}')
+            print(f'Buyprice: {current_price_degen} // Current Price: {current_buy_price_degen} // %-Change: {price_change_percent_degen}')
             for i in range(len(sell_threshold_increments)):
                 if price_change_percent_degen >= sell_threshold_increments[i] and i > current_threshold_index:
                     current_threshold_index = i
