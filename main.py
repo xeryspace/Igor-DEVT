@@ -122,7 +122,7 @@ async def check_price():
     stop_loss_threshold_percent = initial_stop_loss_threshold_percent
     current_threshold_index = -1
     initial_sell_triggered = False
-
+    print("Waiting for Action")
     while True:
         if current_buy_price_xeta > 0:
             current_price_xeta = get_current_price("XETAUSDT")
