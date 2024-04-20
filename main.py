@@ -86,33 +86,10 @@ def open_position(symbol, amount):
     global current_buy_price_xeta
     try:
         current_price = get_current_price(symbol)
-        limit_price = current_price * 0.9989
-        decimal_places = len(str(current_price).split('.')[1])
-        limit_price = round(limit_price, decimal_places)
-
-        # Calculate the quantity based on the USDT amount and limit price
-        qty = round(amount / limit_price)
         session.place_order(
-            category="spot", symbol=symbol, side='buy', orderType="Limit", qty=qty, price=limit_price)
+            category="spot", symbol=symbol, side='buy', orderType="Market", qty=amount, price=current_price)
 
-        max_attempts = 6
-        attempt = 0
-        while attempt < max_attempts:
-            time.sleep(10)
-
-            # Check the wallet balance of the coin
-            symbol_balance = get_wallet_balance(symbol.replace("USDT", ""))
-            if symbol_balance > 10:
-                current_buy_price_xeta = limit_price
-                return
-
-            attempt += 1
-
-        open_orders = session.get_open_orders(category="spot", symbol=symbol)
-        if open_orders['result']:
-            for order in open_orders['result']['list']:
-                session.cancel_order(category="spot", symbol=symbol, orderId=order['orderId'])
-                current_buy_price_xeta = 0
+        current_buy_price_xeta = get_current_price(symbol)
 
     except Exception as e:
         logger.error(f"Error in open_position: {str(e)}")
@@ -121,6 +98,7 @@ def open_position(symbol, amount):
 
 def close_position(symbol, amount):
     global current_buy_price_xeta
+    print(current_buy_price_xeta)
     try:
         session.place_order(
             category="spot", symbol=symbol, side='sell', orderType="Market", qty=amount)
@@ -132,11 +110,13 @@ def close_position(symbol, amount):
 
 
 async def process_signal(symbol):
+    global current_buy_price_xeta
     try:
         usdt_balance = get_wallet_balance("USDT")
         if usdt_balance > 3:
             rounded_down = math.floor(usdt_balance)
             open_position(symbol, rounded_down)
+            current_buy_price_xeta = get_current_price(symbol)
         else:
             print(f"Insufficient USDT balance to open a Buy position for {symbol}")
 
@@ -146,6 +126,7 @@ async def process_signal(symbol):
 
 
 async def check_price():
+    global current_buy_price_xeta
     global current_buy_price_xeta
     initial_stop_loss_threshold_percent = -1
     final_stop_loss_threshold_percent = -2
@@ -215,4 +196,5 @@ async def startup_event():
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)
