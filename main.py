@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import math
+import time
 
 from fastapi import FastAPI, HTTPException, Request
 from pybit.unified_trading import HTTP
@@ -18,9 +19,12 @@ logger = logging.getLogger(__name__)
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
+
 @app.get("/")
 async def read_root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request, "name": "my-app", "version": "Hello world! From FastAPI running on Uvicorn. Eriks App"})
+    return templates.TemplateResponse("index.html", {"request": request, "name": "my-app",
+                                                     "version": "Hello world! From FastAPI running on Uvicorn. Eriks App"})
+
 
 @app.post("/webhook")
 async def handle_webhook(request: Request):
@@ -64,6 +68,7 @@ def get_wallet_balance(symbol):
         logger.error(f"Error in get_wallet_balance: {str(e)}")
         raise
 
+
 def get_current_price(symbol):
     try:
         ticker = session.get_tickers(category="spot", symbol=symbol)
@@ -76,15 +81,38 @@ def get_current_price(symbol):
         logger.error(f"Error in get_current_price: {str(e)}")
         raise
 
+
 def open_position(symbol, amount):
     global current_buy_price_xeta
     try:
+        current_price = get_current_price(symbol)
+        limit_price = current_price * 0.997
+
         session.place_order(
-            category="spot", symbol=symbol, side='buy', orderType="Market", qty=amount)
+            category="spot", symbol=symbol, side='buy', orderType="Limit", qty=amount, price=limit_price)
+
+        # Wait for a certain period of time before checking the wallet balance
+        time.sleep(15)
+
+        # Check the wallet balance of the coin
+        symbol_balance = get_wallet_balance(symbol.replace("USDT", ""))
+        if symbol_balance > 10:
+            current_buy_price_xeta = limit_price
+            return
+
+        open_orders = session.get_open_orders(category="spot", symbol=symbol)
+        if open_orders['result']:
+            for order in open_orders['result']['list']:
+                session.cancel_order(orderId=order['orderId'])
+
+        # Place a market order instead
+        session.place_order(category="spot", symbol=symbol, side='buy', orderType="Market", qty=amount)
         current_buy_price_xeta = get_current_price(symbol)
+
     except Exception as e:
         logger.error(f"Error in open_position: {str(e)}")
         raise
+
 
 def close_position(symbol, amount):
     global current_buy_price_xeta
@@ -97,6 +125,7 @@ def close_position(symbol, amount):
     except Exception as e:
         logger.error(f"Error in close_position: {str(e)}")
         raise
+
 
 async def process_signal(symbol):
     global current_buy_price_xeta
@@ -127,7 +156,8 @@ async def check_price():
         if current_buy_price_xeta > 0:
             current_price_xeta = get_current_price("XETAUSDT")
             price_change_percent_xeta = (current_price_xeta - current_buy_price_xeta) / current_buy_price_xeta * 100
-            print(f'Buyprice: {current_buy_price_xeta} // Current Price: {current_price_xeta} // %-Change: {price_change_percent_xeta}')
+            print(
+                f'Buyprice: {current_buy_price_xeta} // Current Price: {current_price_xeta} // %-Change: {price_change_percent_xeta}')
 
             if not initial_sell_triggered and price_change_percent_xeta <= initial_stop_loss_threshold_percent:
                 print(f"Price decreased by {price_change_percent_xeta:.2f}% for XETAUSDT. Selling 50% of XETA.")
@@ -146,7 +176,8 @@ async def check_price():
                     initial_sell_triggered = False
 
             elif initial_sell_triggered and price_change_percent_xeta <= final_stop_loss_threshold_percent:
-                print(f"Price decreased further by {price_change_percent_xeta:.2f}% for XETAUSDT. Selling remaining XETA.")
+                print(
+                    f"Price decreased further by {price_change_percent_xeta:.2f}% for XETAUSDT. Selling remaining XETA.")
                 symbol_balance_xeta = get_wallet_balance("XETA")
                 if symbol_balance_xeta > 10:
                     symbol_balance_xeta = math.floor(symbol_balance_xeta)
@@ -160,7 +191,8 @@ async def check_price():
                         f"Price increased by {price_change_percent_xeta:.2f}% for XETAUSDT. Setting sell threshold to {stop_loss_threshold_percent:.2f}%.")
                     break
 
-            if price_change_percent_xeta >= 8.0 or (price_change_percent_xeta <= stop_loss_threshold_percent and not initial_sell_triggered):
+            if price_change_percent_xeta >= 8.0 or (
+                    price_change_percent_xeta <= stop_loss_threshold_percent and not initial_sell_triggered):
                 print(f"Price reached {price_change_percent_xeta:.2f}% for XETAUSDT. Selling all XETA.")
                 symbol_balance_xeta = get_wallet_balance("XETA")
                 if symbol_balance_xeta > 10:
@@ -169,10 +201,13 @@ async def check_price():
 
         await asyncio.sleep(0.08)
 
+
 @app.on_event("startup")
 async def startup_event():
     asyncio.create_task(check_price())
 
+
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)
