@@ -149,7 +149,7 @@ async def check_price():
     global current_buy_price_xeta
     initial_stop_loss_threshold_percent = -1
     final_stop_loss_threshold_percent = -2
-    sell_threshold_increments = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    sell_threshold_increments = [1.5, 3, 4, 5, 6, 7, 8, 9, 10]
     stop_loss_threshold_percent = initial_stop_loss_threshold_percent
     current_threshold_index = -1
     initial_sell_triggered = False
