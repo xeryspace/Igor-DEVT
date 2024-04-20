@@ -36,10 +36,11 @@ async def handle_webhook(request: Request):
 
         body = await request.json()
         symbol = body.get("symbol")
+        action = body.get("action")
 
         print(f"Received signal for {symbol}")
 
-        await process_signal(symbol)
+        await process_signal(symbol, action)
         return {"status": "success", "data": "Position updated"}
 
     except json.JSONDecodeError as e:
@@ -120,14 +121,14 @@ def close_partial_position(symbol, amount):
         raise
 
 
-async def process_signal(symbol):
+async def process_signal(symbol, action):
     global current_buy_price_xeta
     try:
         usdt_balance = get_wallet_balance("USDT")
         if usdt_balance > 3:
             rounded_down = math.floor(usdt_balance)
             xeta_price_temp = get_current_price(symbol)
-            logger.info(f"Signal received for {symbol} with price: {xeta_price_temp}")
+            logger.info(f"{action} signal received for {symbol} with price: {xeta_price_temp}")
 
             # Calculate the time to wait until the next 3-minute candle closes
             current_time = time.time()
@@ -142,15 +143,24 @@ async def process_signal(symbol):
             else:
                 logger.info("Less than 5 seconds remaining for the next 3-minute candle close. Proceeding with the check.")
 
-            # Check if the current price is equal to or higher than the temp price
+            # Check if the current price meets the conditions based on the signal type
             current_price = get_current_price(symbol)
-            if current_price >= xeta_price_temp:
-                logger.info(f"Current price ({current_price}) is equal to or higher than the temp price ({xeta_price_temp}). Proceeding with the buy.")
-                open_position(symbol, rounded_down)
-                current_buy_price_xeta = get_current_price(symbol)
-            else:
-                logger.info(f"Current price ({current_price}) is lower than the temp price ({xeta_price_temp}). Aborting the buy.")
-                current_buy_price_xeta = 0
+            if action == "buy":
+                if current_price >= xeta_price_temp:
+                    logger.info(f"Current price ({current_price}) is equal to or higher than the temp price ({xeta_price_temp}). Proceeding with the buy.")
+                    open_position(symbol, rounded_down)
+                    current_buy_price_xeta = get_current_price(symbol)
+                else:
+                    logger.info(f"Current price ({current_price}) is lower than the temp price ({xeta_price_temp}). Aborting the buy.")
+                    current_buy_price_xeta = 0
+            elif action == "stillbuy":
+                if current_price < xeta_price_temp:
+                    logger.info(f"Current price ({current_price}) is lower than the temp price ({xeta_price_temp}). Proceeding with the buy.")
+                    open_position(symbol, rounded_down)
+                    current_buy_price_xeta = get_current_price(symbol)
+                else:
+                    logger.info(f"Current price ({current_price}) is equal to or higher than the temp price ({xeta_price_temp}). Aborting the buy.")
+                    current_buy_price_xeta = 0
         else:
             logger.info(f"Insufficient USDT balance to open a Buy position for {symbol}")
 
